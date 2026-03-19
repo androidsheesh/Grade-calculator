@@ -12,25 +12,33 @@ import java.util.List;
  *
  * - Serves static files (index.html, style.css, script.js) from the parent directory.
  * - Exposes POST /api/calculate for grade computation.
+ * - Railway-compatible: reads PORT from environment variable.
  *
- * Usage:
+ * Usage (local dev):
  *   cd backend/
  *   javac *.java
  *   java GradeCalculatorServer
  *
- * Then open http://localhost:8080 in your browser.
+ * Railway sets the PORT env var automatically.
  */
 public class GradeCalculatorServer {
 
-    private static final int PORT = 8080;
     // Static files live one directory up from /backend
     private static Path staticDir;
 
     public static void main(String[] args) throws Exception {
+        // Use PORT env variable (Railway sets this), default to 8080 for local dev
+        int port = 8080;
+        String envPort = System.getenv("PORT");
+        if (envPort != null && !envPort.isEmpty()) {
+            port = Integer.parseInt(envPort);
+        }
+
         // Resolve the static directory (parent of backend/)
         staticDir = Paths.get(System.getProperty("user.dir")).getParent().toAbsolutePath();
 
-        HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
+        // Bind to 0.0.0.0 so Railway (and any external host) can reach the server
+        HttpServer server = HttpServer.create(new InetSocketAddress("0.0.0.0", port), 0);
 
         // API endpoint
         server.createContext("/api/calculate", new CalculateHandler());
@@ -43,7 +51,7 @@ public class GradeCalculatorServer {
 
         System.out.println("========================================");
         System.out.println("  Grade Calculator Server is running");
-        System.out.println("  Open: http://localhost:" + PORT);
+        System.out.println("  Listening on 0.0.0.0:" + port);
         System.out.println("  Static dir: " + staticDir);
         System.out.println("========================================");
     }
